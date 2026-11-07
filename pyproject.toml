@@ -1,15 +1,17 @@
 [project]
 name = "ragsody"
 version = "0.1.0"
-description = "Ragsody -- private semantic memory engine, local inference, multi-provider LLM review."
+description = "Document question-answering (RAG) backend with multi-provider LLM routing."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "MIT" }
-authors = [{ name = "Camilo Castellanos" }]
+license = { file = "LICENSE" }
+authors = [{ name = "Camilo Andrés Castellanos Herrera" }]
 
-# Corregido contra los imports reales de src/ (ver src/ingest/ingest.py,
-# web_crawler.py, web_ingest.py) -- el requirements.txt anterior no tenía
-# pypdf ni readability-lxml pese a que ambos se importan en producción.
+# Copyright (c) 2026 Camilo Andrés Castellanos Herrera
+
+# Keep this list aligned with the imports under src/. The previous
+# requirements file omitted pypdf and readability-lxml even though both
+# are imported by the production ingestion path.
 dependencies = [
     "openai>=1.40.0",
     "fastapi>=0.111.0",
@@ -26,10 +28,16 @@ dependencies = [
     "mcp>=2.0.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/camilo6castell/ragsody_server"
+Repository = "https://github.com/camilo6castell/ragsody_server"
+Client = "https://github.com/camilo6castell/ragsody_client"
+"Live demo" = "https://ragsody.vercel.app"
+
 [project.optional-dependencies]
-# Solo hace falta si vas a usar el backend "ollama_native" (ver
-# src/llm/backends/ollama_native.py) -- el import es lazy justamente para
-# no forzar esta dependencia en instalaciones que solo usan FastFlowLM/Gemini.
+# Only needed when the "ollama_native" backend is used (see
+# src/nlp/llm/backends/ollama_native.py). The import is lazy so that
+# installs using only FastFlowLM or Gemini do not need this package.
 ollama = ["ollama>=0.3.0"]
 dev = [
     "mypy>=1.11.0",
@@ -38,16 +46,12 @@ dev = [
     "pytest-cov>=5.0.0",
 ]
 
-# Sin [build-system]: el proyecto corre como app in-place (`python -m
-# src.main`, ver docstring de src/main.py), no como librería instalada vía
-# pip. Si en algún momento querés `pip install -e .`, agregar acá un
-# backend (hatchling/setuptools) -- pero eso implica primero sacar el
-# prefijo "src." de todos los imports (from src.config import ... -> from
-# config import ...), porque hoy "src" es el paquete raíz tal cual, no un
-# directorio de layout src/. Es un refactor de imports en todo el árbol,
-# no un cambio de config -- avisame si en algún momento lo querés y lo
-# encaramos aparte.
-
+# There is intentionally no [build-system] section: the project runs
+# in place (`python -m src.main`, see the src/main.py docstring), not as
+# a library installed with pip. Adding `pip install -e .` would require
+# a build backend and a repository-wide import refactor (removing the
+# "src." prefix), so it is a separate change rather than a packaging
+# configuration tweak.
 
 [tool.ruff]
 line-length = 100
@@ -55,11 +59,11 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = [
-    "E",   # pycodestyle (errores)
+    "E",   # pycodestyle (errors)
     "F",   # pyflakes
-    "I",   # isort (orden de imports)
-    "UP",  # pyupgrade (sintaxis moderna para py311)
-    "B",   # flake8-bugbear (bugs comunes no obvios)
+    "I",   # isort (import order)
+    "UP",  # pyupgrade (modern syntax for py311)
+    "B",   # flake8-bugbear (common non-obvious bugs)
     "SIM", # flake8-simplify
 ]
 
@@ -67,12 +71,11 @@ select = [
 combine-as-imports = true
 
 [tool.ruff.lint.flake8-bugbear]
-# B008 (function-call-in-default-argument) es un falso positivo para el
-# patrón `Depends(...)` de FastAPI -- es justamente así que FastAPI
-# resuelve dependencias, no un bug de argumento mutable compartido entre
-# llamadas. Whitelist puntual en vez de desactivar B008 entero: así B008
-# sigue protegiendo contra defaults mutables reales (listas/dicts) en el
-# resto del código.
+# B008 (function-call-in-default-argument) is a false positive for the
+# FastAPI `Depends(...)` pattern: that is how FastAPI resolves
+# dependencies, not a shared mutable default. Whitelist these calls so
+# B008 still protects against real mutable defaults (lists/dicts)
+# elsewhere in the codebase.
 extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "fastapi.Body"]
 
 [tool.ruff.format]
@@ -82,9 +85,9 @@ line-ending = "lf"
 docstring-code-format = true
 
 
-# Migrado 1:1 desde mypy.ini (que queda eliminado -- mypy busca mypy.ini
-# ANTES que pyproject.toml, así que tenerlos a los dos deja este bloque
-# muerto: ver https://mypy.readthedocs.io/en/stable/config_file.html).
+# Migrated 1:1 from mypy.ini. mypy searches for mypy.ini BEFORE
+# pyproject.toml, so keeping both files would leave this block unused.
+# See https://mypy.readthedocs.io/en/stable/config_file.html.
 [tool.mypy]
 python_version = "3.11"
 strict = true
@@ -97,7 +100,20 @@ mypy_path = "."
 exclude = ["\\.venv"]
 
 [[tool.mypy.overrides]]
-module = ["sentence_transformers", "faiss", "requests.*", "bs4.*", "readability.*", "pypdf.*"]
+module = [
+    "sentence_transformers",
+    "faiss",
+    "requests",
+    "requests.*",
+    "bs4",
+    "bs4.*",
+    "readability",
+    "readability.*",
+    "pypdf",
+    "pypdf.*",
+    "ollama",
+    "ollama.*",
+]
 ignore_missing_imports = true
 
 
