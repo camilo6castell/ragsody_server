@@ -1,9 +1,9 @@
 """
 Router "attachments" -- ad-hoc files attached to the NEXT query of a
 conversation (see src/context/attachments.py). They are not indexed, nor
-do they generate responses on their own: /api/v1/query and /api/v1/query/agent
-(src/api/routers/chat.py) read them, inject them into the prompt, and
-consume (delete) them after processing the query.
+do they generate responses on their own: POST /api/v1/query reads them,
+injects them into the prompt, and consumes (deletes) them after
+processing the query.
 """
 
 from __future__ import annotations

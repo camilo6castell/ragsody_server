@@ -1,5 +1,5 @@
 """
-Query service -- business logic for /query and /query/agent endpoints.
+Query service -- business logic for the POST /query endpoint.
 
 Extracted from src/api/routers/chat.py to separate HTTP concerns from
 domain logic. The router handles validation and response formatting;
@@ -91,8 +91,7 @@ def consume_attachments(conversation_id: str | None, store: AttachmentStore) -> 
     """
     Deletes the ad-hoc attachments for a conversation after processing a
     query -- they are single-use (see AttachmentStore docstring). Called
-    at the end of /query and /query/agent, in all three branches
-    (raw/web-only/RAG) equally: attachments apply to any of them.
+    at the end of POST /query in all branches (raw/web-only/RAG) equally.
     No-op if conversation_id is None or there were no attachments.
     """
     if conversation_id is not None:
@@ -140,18 +139,7 @@ def answer_web_only(
 ) -> tuple[str, list[WebSource]]:
     """
     Case A (see QueryRequest.web_search): no collections/ephemeral files,
-    the web search IS the context. Shared by /query and /query/agent.
-
-    Why /query/agent does not run its graph (retrieve -> evaluate ->
-    reformulate -> review) in this case: that pipeline is designed
-    around local vector retrieval characteristics -- confidence measures
-    chunk_index spread / source dominance over FAISS results (see
-    src/retrieval/search.py), something
-    that has no analogue in web search results. Forcing web results
-    through that logic would require redesigning the agent's notion of
-    "confidence"; instead, when there are no collections, both endpoints
-    share this same simple path -- the agent mode adds nothing different
-    here because there is no local retrieval to evaluate or correct.
+    the web search IS the context.
 
     attachments: see inject_attachments() in src/prompts/builder.py --
     orthogonal to web context, prepended to the question regardless.
@@ -193,15 +181,10 @@ def answer_raw(
     Unlike answer_web_only() and the normal RAG case, this does NOT use
     build_system_prompt() -- the LLM responds directly to the user's
     question (plus attachments, if any) WITHOUT any system prompt (see
-    build_messages() in src/llm/generate.py: system_prompt="" omits the
-    "system" message entirely). The user is responsible for giving the
-    model its role/rules/task in their own message -- this mode does not
-    impose any RAG/grounding/citation framework.
-
-    Shared by /query and /query/agent -- neither gains anything from
-    running its grounding/review pipeline when there is nothing to
-    anchor the response to (same argument as answer_web_only, see its
-    docstring).
+    build_messages() in src/nlp/llm/generate.py: system_prompt="" omits
+    the "system" message entirely). The user is responsible for giving
+    the model its role/rules/task in their own message -- this mode does
+    not impose any RAG/grounding/citation framework.
 
     May raise ContextLimitExceeded (src/nlp/llm/context_guard.py).
     """
@@ -232,11 +215,8 @@ def supplement_with_web(
 ) -> tuple[str, list[WebSource], bool]:
     """
     Attempts to complement `answer` (already generated from local context)
-    with a web search -- plan case B: normal RAG first, the web only
-    appends a paragraph at the end if it truly adds something new.
-    Shared by /query and /query/agent -- in both, the response already
-    came out of the corresponding pipeline (linear or graph) before
-    reaching here, so this step is identical for both.
+    with a web search -- case B: normal RAG first, the web only appends a
+    paragraph at the end if it truly adds something new.
 
     Returns (answer, web_sources, quota_exceeded). Completely silent
     best-effort for any failure THAT IS NOT quota exhaustion: the main

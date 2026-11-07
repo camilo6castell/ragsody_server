@@ -33,7 +33,7 @@ think_mode is validated here against `src.config.models.get_supports()`
 as-is to `src.config.models.build_kwargs()`, which builds the final
 dict already in the backend's native shape (extra_body for
 OpenAI-compatible, `think` kwarg for Ollama). The LLMClient
-(src/llm/backends/) that actually sends it does not need to know about
+(src/nlp/llm/backends/) that actually sends it does not need to know about
 this mechanism. think_mode=None does NOT mean "off" -- it means "no
 override", and build_kwargs() leaves intact what is already written in
 _MODELS[model] for that model (see src/config/models/flm.py).
@@ -317,7 +317,7 @@ def _complete(
     # Diagnostic log for the reported bug of messages arriving
     # incomplete at the frontend (sometimes missing the first ~16
     # characters). There is no slicing in this module or in the
-    # request->JSONResponse->frontend path (reviewed), so if the
+    # request->JSONResponse->frontend path, so if the
     # truncation is already present HERE (length/preview shorter than
     # expected, or preview starting mid-word), the source is the
     # provider/model or the HTTP client (OpenAI SDK / ollama-python),
@@ -381,7 +381,7 @@ def ask_llm_internal(
     max_tokens: int | None = None,
 ) -> str | None:
     """
-    LLM call for internal graph operations (e.g. query reformulation).
+    LLM call for internal operations (e.g. web-supplement decisions).
     """
     messages = build_messages(prompt=prompt, chat_memory=[], system_prompt=system_prompt)
 

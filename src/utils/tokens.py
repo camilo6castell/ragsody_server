@@ -1,5 +1,5 @@
 """
-Token estimation for the context guard (src/llm/context_guard.py).
+Token estimation for the context guard (src/nlp/llm/context_guard.py).
 
 There is no exact tokenizer available for all backends (Qwen via
 FastFlowLM, DeepSeek via Ollama, Gemini) without bringing in 3 different

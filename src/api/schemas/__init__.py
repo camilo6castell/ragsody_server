@@ -1,10 +1,10 @@
 """
-Schemas Pydantic de la API REST, organizados por dominio -- un archivo
-por router (chat.py, files.py, config.py), igual que src/api/routers/.
+Pydantic schemas for the REST API, organized by domain -- one file per
+router (chat.py, files.py, config.py), mirroring src/api/routers/.
 
-Este __init__ re-exporta todo para que el resto del código pueda seguir
-haciendo `from src.api.schemas import QueryRequest` sin que le importe
-en qué submódulo vive cada schema.
+This package re-exports the public schemas so callers can continue to
+use `from src.api.schemas import QueryRequest` without depending on the
+submodule layout.
 """
 
 from src.api.schemas.attachments import (

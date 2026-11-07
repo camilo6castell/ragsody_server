@@ -1,7 +1,6 @@
 """
 Preventive context-limit guard -- runs BEFORE calling the LLM, both in
-/query (src/api/routers/chat.py) and in the LangGraph generate_node
-(src/graph/nodes.py).
+POST /query (src/api/routers/chat.py).
 
 It does not truncate or rewrite anything automatically: if the request
 does not fit, it raises ContextLimitExceeded with the exact details so

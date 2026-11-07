@@ -131,8 +131,7 @@ async def query(
     """
     Linear pipeline: retrieve -> generate. No adaptive retrieval, prioritizes speed.
 
-    Three possible cases, evaluated in this order (see helpers
-    shared with /query/agent):
+    Three possible cases, evaluated in this order:
 
       Case raw -- no collections/ephemeral files and no web_search:
       there is no RAG context source at all. Responds directly with
@@ -247,7 +246,7 @@ async def query(
     # Single-use ad-hoc attachments -- see AttachmentStore docstring.
     consume_attachments(request.conversation_id, attachment_store)
 
-    # See equivalent comment in src/llm/generate.py _complete(): diagnostic
+    # See equivalent comment in src/nlp/llm/generate.py _complete(): diagnostic
     # log for the incomplete messages bug in the frontend. If this length
     # already matches the one logged in _complete(), the response came out
     # complete from this endpoint and the truncation happens in the

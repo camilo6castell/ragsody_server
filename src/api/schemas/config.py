@@ -42,9 +42,9 @@ class ProvidersResponse(BaseModel):
     """Response for GET /api/v1/config/providers."""
 
     providers: dict[str, ProviderInfo]
-    # Role name that /query and /query/agent use for the final response
-    # to the user (LLMRole.GENERATE.value) -- the frontend uses it to
-    # know which entry in `providers` to look at when deciding which
+    # Role name that POST /query uses for the final response to the user
+    # (LLMRole.GENERATE.value) -- the frontend uses it to know which
+    # entry in `providers` to look at when deciding which
     # GenerationOptions controls to show (e.g. the think mode switch).
     # The keys of `providers` ARE role names (see docstring of
     # list_provider_configs in src/nlp/llm/providers.py), so no

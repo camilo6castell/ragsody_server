@@ -44,14 +44,12 @@ Design (two independent axes):
   - Adding a new backend (Claude, OpenAI, Mistral...) means adding an
     entry to _backend_url_table()/_backend_api_key_table()/
     _BACKEND_CLIENT + its file in src/config/models/ (same 4 functions
-    as flm/ollama/gemini) -- you never need to touch graph.py, nodes.py
-    or generate.py. Adding a new model under an existing backend is an
-    entry in src/config/models/<backend>.py, nothing more.
-  - Graph nodes do not import this module directly: they use
+    as flm/ollama/gemini) -- you never need to touch generate.py. Adding
+    a new model under an existing backend is an entry in
+    src/config/models/<backend>.py, nothing more.
+  - Routers and services do not import this module directly: they use
     ask_llm(..., provider=...) / ask_llm_internal(..., provider=...) in
-    generate.py, which does depend on it. This way the graph never knows
-    about concrete LLM clients, only about "which role to use"
-    (LLMRole.X.value).
+    generate.py, which depends on it.
 
 Why this instead of the previous getattr(settings, f"{prefix}_base_url"):
   That design generated an AttributeError as soon as a prefix (e.g.

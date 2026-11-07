@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 class GenerationOptions(BaseModel):
     """
     Optional generation overrides for a single call to
-    POST /query or POST /query/agent.
+    POST /query.
 
     Temperature is NOT one of these fields -- it is the exclusive
     responsibility of each file in src/config/models/ (_MODELS[model]),
@@ -23,7 +23,7 @@ class GenerationOptions(BaseModel):
     per-request temperature override needs to be exposed again,
     see the history of this file before reinventing the wheel (the
     previous design with Settings.llm_temperature silently overwrote
-    the _MODELS value on every request; see src/llm/generate.py).
+    the _MODELS value on every request; see src/nlp/llm/generate.py).
 
     think_mode: named field because it is a common concept across
     most reasoning provider/model combos (designed for the "Think"
@@ -38,7 +38,7 @@ class GenerationOptions(BaseModel):
     because by definition it can be anything a specific provider
     understands. That is why it requires the provider to declare
     "extra" in its `supports` (see ProviderConfig in
-    src/llm/providers.py): it is an explicit opt-in, not "any JSON
+    src/nlp/llm/providers.py: it is an explicit opt-in, not "any JSON
     passes to any server".
 
     Does not include max_turns or top_k_initial/top_k_final: the chat
@@ -52,7 +52,7 @@ class GenerationOptions(BaseModel):
 
     None of these values mutate Settings or ProviderConfig -- they are
     per-request parameters, not server state (see the docstring of
-    src/llm/generate.py for why). The server validates each field
+    src/nlp/llm/generate.py for why). The server validates each field
     against ProviderConfig.supports before using it and returns 400 if
     the active provider does not support it.
     """
@@ -71,7 +71,7 @@ class WebSource(BaseModel):
 
 class QueryRequest(BaseModel):
     """
-    Payload for POST /query and POST /query/agent.
+    Payload for POST /query.
 
     collections:    tokens with the same syntax as the CLI, e.g.
                     ["sociologia", "psicoanalisis/Freud_Suenos"].
@@ -119,17 +119,17 @@ class QueryRequest(BaseModel):
 
 class QueryResponse(BaseModel):
     """
-    Response for POST /query and POST /query/agent.
+    Response for POST /query.
 
-    reformulated:     only relevant in /query/agent. True if the graph
-                       reformulated the query before generating.
-    used_web_search:   what ACTUALLY happened, not what was requested --
+    reformulated:      Reserved for compatibility with older clients.
+                       The current backend always returns False.
+    used_web_search:   What actually happened, not what was requested --
                        False if web_search=True was requested but the
                        search returned no usable results (see
                        src/retrieval/web_search.py), even though the rest
                        of the response was still generated with the
                        locally available context.
-    web_sources:       web sources actually used (title + URL), for the
+    web_sources:       Web sources actually used (title + URL), for the
                        frontend to display as citations. None if
                        used_web_search is False.
     web_search_quota_exceeded: True if Tavily returned that the account

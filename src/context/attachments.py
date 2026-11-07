@@ -59,7 +59,7 @@ SUPPORTED_SUFFIXES = {
 
 # Per-file size limit -- a giant text file (log, dataset) would break
 # the context window just like silently rejecting it later in the
-# context guard (see src/llm/context_guard.py), but rejecting it here
+# context guard (see src/nlp/llm/context_guard.py), but rejecting it here
 # gives an immediate specific error instead of a generic 413 only when
 # sending the query.
 MAX_FILE_BYTES = 512_000  # 500 KB
