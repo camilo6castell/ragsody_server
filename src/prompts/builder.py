@@ -3,30 +3,15 @@ Prompt builders used by the RAG pipeline.
 
 Conversation history is NOT embedded into the prompt itself.
 Instead, it is sent as structured user/assistant messages through
-the chat completion API (see build_messages() in generate.py).
-
-Design conventions (kept consistent across every prompt in this module):
-
-  - Every system prompt follows the same skeleton where applicable:
-        ROLE -> GROUNDING -> CITATION -> STYLE -> TASK-SPECIFIC RULES
-  - Section headers are always UPPERCASE single words/phrases followed by ":".
-  - Rules are always bullet lists ("-"), never numbered prose.
-  - "REQUIREMENTS" is used for output-format constraints; "RULES" is used
-    for behavioral constraints. This distinction is kept everywhere.
-
-Citation format assumption:
-  Every retrieved chunk is expected to carry identifiable source/page
-  metadata (e.g. a header line like "[SOURCE: <name> | PAGE: <n>]" prepended
-  to the chunk text upstream, before it reaches build_context_block()).
-  If your retrieval layer does not yet attach this metadata per chunk,
-  the model has nothing to cite and will either omit citations or
-  hallucinate them -- this is the single most important upstream
-  dependency for the citation behavior defined below.
+the chat completion API (see build_messages() in
+src/nlp/llm/generate.py).
 
 Exported functions:
-  build_prompt              -> Main generation prompt.
-  build_review_prompt       -> Review prompt (Gemini validates the answer).
-  build_correction_prompt   -> Repair prompt after a failed review.
+  build_system_prompt()           -> System prompt for grounded answers.
+  build_prompt()                  -> Main generation prompt.
+  inject_attachments()            -> Prepends raw attachments to a question.
+  build_web_supplement_system_prompt() -> System prompt for web supplements.
+  build_web_supplement_prompt()   -> Prompt for optional web addenda.
 """
 
 from src.domain.models import ChatMode
@@ -84,32 +69,6 @@ HARD
 SOFT
 {build_mode_rules(ChatMode.SOFT)}
 """  # noqa: E501
-
-
-def build_reformulation_system_prompt() -> str:
-    return """
-ROLE:
-
-You are an expert in semantic retrieval for Retrieval-Augmented Generation (RAG) systems.
-
-TASK:
-
-Rewrite the user's question to maximize retrieval quality in a vector database.
-
-RULES:
-
-- Preserve the user's original intent exactly.
-- Do not answer the question.
-- Do not introduce new facts, assumptions, or interpretations.
-- Resolve ambiguity only when it can be inferred from the original wording.
-- Prefer explicit terminology over vague references.
-
-REQUIREMENTS:
-
-- Return only the rewritten question, self-contained and optimized for semantic retrieval.
-- Keep the entire reformulation in the same language as the user's question.
-- No preamble, no explanation, no markdown.
-"""
 
 
 def build_web_supplement_system_prompt() -> str:
@@ -239,144 +198,6 @@ Question:
 """
 
 
-def build_review_system_prompt() -> str:
-    return """
-ROLE:
-
-You are a quality reviewer for a Retrieval-Augmented Generation (RAG) system.
-
-TASK:
-
-Evaluate whether the generated answer satisfies every quality requirement below.
-
-RULES:
-
-1. Grounding
-   - Every factual statement must be supported by the retrieved context.
-   - Reject any hallucinated information or unsupported claims.
-   - Reject any use of external knowledge.
-
-2. Citation
-   - Each claim that depends on a source must cite that source (and page, when available) immediately, not only at the end of a paragraph.
-   - Claims resting on multiple sources must cite all of them together.
-   - Reject citations that reference a source or page not present in the retrieved context.
-
-3. Voice
-   - Reject phrasing that exposes the retrieval mechanism (e.g. "according to the provided context", "based on the retrieved sources") instead of naturally attributing the claim to its source.
-
-4. Language
-   - Reject if the answer is not in the same language as the original question.
-"""  # noqa: E501
-
-
-def build_review_prompt(
-    context_chunks: list[str],
-    question: str,
-    answer: str,
-) -> str:
-    """
-    Build the prompt used by the review node.
-
-    The reviewer validates that the generated answer satisfies the
-    quality requirements of the RAG system before it is returned to
-    the user.
-    """
-
-    return f"""
-Retrieved context:
-
-{build_context_block(context_chunks)}
-
-Original question:
-
-{question}
-
-Generated answer:
-
-{answer}
-
-REQUIREMENTS:
-
-Return only one valid JSON object.
-
-If the answer satisfies every criterion:
-
-{{"passed": true}}
-
-Otherwise:
-
-{{
-  "passed": false,
-  "reason": "<grounding|missing_sources|exposed_retrieval_voice|language>",
-  "feedback": "<concise explanation of the problem>"
-}}
-
-Reason values:
-
-- grounding
-- missing_sources
-- exposed_retrieval_voice
-- language
-
-Do not return markdown, explanations, comments, or any text outside the JSON object.
-"""  # noqa: E501
-
-
-def build_correction_prompt(
-    context_chunks: list[str],
-    question: str,
-    previous_answer: str,
-    feedback: str,
-    mode: str,
-) -> str:
-    """
-    Build the prompt used to repair an answer rejected during review.
-    """
-
-    return f"""
-ROLE:
-
-The previous answer was rejected during the RAG review process. Your task is
-to repair it, not to generate a completely new one.
-
-Response mode: {mode}
-
-Apply the rules associated with this response mode.
-
-Retrieved context:
-
-{build_context_block(context_chunks)}
-
-Original question:
-
-{question}
-
-Rejected answer:
-
-{previous_answer}
-
-Reviewer feedback:
-
-{feedback}
-
-RULES:
-
-- Correct every issue identified by the reviewer.
-- Preserve all correct information from the rejected answer.
-- Modify only what is necessary.
-- Keep every statement fully grounded in the retrieved context.
-- Cite each claim immediately after it ({{source name}}, p. {{page}}), combining sources when a claim rests on more than one.
-- Never introduce external knowledge.
-- Never expose the retrieval mechanism (no "according to the provided context" style phrasing).
-- Respond in the same language as the original question.
-- Improve clarity and structure whenever possible without changing the meaning.
-
-REQUIREMENTS:
-
-- Return only the corrected answer.
-"""  # noqa: E501
-
-
 def build_web_supplement_prompt(
     question: str,
     answer: str,
@@ -405,4 +226,4 @@ Web fragments retrieved:
 User's question:
 
 {question}
-"""  # noqa: E501
+"""
