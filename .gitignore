@@ -1,12 +1,19 @@
-# venv
+# Virtual environments and local vendor trees
 .venv/
 node_modules/
-#.agents/
+.agents/skills/
 #skills-lock.json
 
-# env
+# Environment and credentials
 .env
-.env.providers
+.env.*
+!.env.example
+!.env.providers.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
 
 # Byte-compiled / optimized / DLL files
 **/__pycache__/
@@ -18,12 +25,28 @@ __pycache__/
 *.pyo
 *.pyd
 
+# Caches and test coverage
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
+.coverage
+htmlcov/
 
-# Mine
+# Local data, indexes, and uploads
+data/
+vector_stores/
+uploads/
+*.faiss
+*.pkl
+*.npy
+*.sqlite
+*.sqlite3
+*.db
+
+# Local notes and diagnostics
 doc/
-
-# Volcado de diagnóstico opt-in (LLM_DEBUG_DUMP=true, ver src/llm/generate.py)
 debug_last_llm_request.json
+*.log
+
+# OS metadata
+.DS_Store
