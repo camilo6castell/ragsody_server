@@ -161,6 +161,9 @@ def create_app(streamable_http_path: str = "/mcp") -> Starlette:
         path matches the client's expectation (e.g. ``"/mcp/"``).
     """
     global _mcp_lifespan_ctx
+    lan_host = settings.mcp_lan_host.strip()
+    lan_hosts = [f"{lan_host}:*"] if lan_host else []
+    lan_origins = [f"http://{lan_host}:*", f"https://{lan_host}:*"] if lan_host else []
     mcp_app = server.streamable_http_app(
         streamable_http_path=streamable_http_path,
         transport_security=TransportSecuritySettings(
@@ -169,12 +172,12 @@ def create_app(streamable_http_path: str = "/mcp") -> Starlette:
                 *settings.mcp_allowed_hosts,
                 "127.0.0.1:*",
                 "localhost:*",
-                "192.168.2.24:*",
+                *lan_hosts,
             ],
             allowed_origins=[
                 "http://localhost:*",
                 "http://127.0.0.1:*",
-                "http://192.168.2.24:*",
+                *lan_origins,
             ],
         ),
     )

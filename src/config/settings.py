@@ -12,10 +12,12 @@ The exports at the bottom of the module maintain compatibility with all
 files that already import directly (e.g.: from src.config.settings import CHUNK_SIZE).
 """
 
+import json
 from pathlib import Path
+from typing import Annotated, Any
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 from src.domain.models import LLMRole
 
@@ -133,6 +135,43 @@ class Settings(BaseSettings):
             _split_backend_model(v, info.field_name.upper())
         return v
 
+    @field_validator("mcp_allowed_hosts", mode="before")
+    @classmethod
+    def _parse_mcp_allowed_hosts(cls, value: Any) -> list[str]:
+        """
+        Accepts the empty string, a comma-separated list, or a JSON array.
+
+        pydantic-settings normally decodes list fields as JSON before field
+        validators run, which makes the documented comma-separated form
+        fail. NoDecode disables that decoding for this field; this parser
+        keeps both forms working and treats an empty value as the localhost
+        default.
+        """
+        if value is None or value == "":
+            return ["127.0.0.1", "localhost"]
+        if isinstance(value, list):
+            return value
+        if not isinstance(value, str):
+            raise ValueError("MCP_ALLOWED_HOSTS must be a string or a list of strings")
+
+        raw = value.strip()
+        if not raw:
+            return ["127.0.0.1", "localhost"]
+        if raw.startswith("["):
+            parsed = json.loads(raw)
+            if not isinstance(parsed, list) or not all(isinstance(item, str) for item in parsed):
+                raise ValueError("MCP_ALLOWED_HOSTS JSON value must be an array of strings")
+            return parsed
+        return [item.strip() for item in raw.split(",") if item.strip()]
+
+    @field_validator("demo_max_tokens", mode="before")
+    @classmethod
+    def _empty_demo_max_tokens(cls, value: Any) -> Any:
+        """Treat an empty DEMO_MAX_TOKENS value as "use the model default"."""
+        if value == "":
+            return None
+        return value
+
     @property
     def embedder_backend(self) -> str:
         return _split_backend_model(self.embedder, "EMBEDDER")[0]
@@ -229,7 +268,7 @@ class Settings(BaseSettings):
     # Opt-in diagnostics: dumps the EXACT request (messages + flattened
     # extra_fields) sent to the provider on each call to
     # ./debug_last_llm_request.json -- see _dump_request_for_debug in
-    # src/llm/generate.py. Intended for reproducing with curl a failure
+    # src/nlp/llm/generate.py. Intended for reproducing with curl a failure
     # that depends on the actual prompt size/content (e.g. RAG with many
     # chunks) without rebuilding it by hand. Default False: never writes
     # files during normal use.
@@ -252,8 +291,8 @@ class Settings(BaseSettings):
     # Adding a new backend (e.g. Claude, OpenAI) = an entry in the
     # registry of src/nlp/llm/providers.py + a file in
     # src/config/models/ + (if a new client is needed) one in
-    # src/nlp/llm/backends/ -- graph.py, nodes.py or generate.py
-    # never need to be touched.
+    # src/nlp/llm/backends/ -- generate.py and the routers never need
+    # to be touched.
     #
     # Each role may also declare an optional fallback (LLM_ROL_*_FALLBACK,
     # see role_fallback_spec()): a secondary backend+model used by
@@ -334,7 +373,12 @@ class Settings(BaseSettings):
     mcp_host: str = Field(default="127.0.0.1")
     mcp_port: int = Field(default=8100, gt=0)
     mcp_bearer_token: str = Field(default="")
-    mcp_allowed_hosts: list[str] = Field(default_factory=lambda: ["127.0.0.1", "localhost"])
+    mcp_allowed_hosts: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: ["127.0.0.1", "localhost"]
+    )
+    # Optional LAN/Tailscale hostname or IP added to the MCP DNS-rebinding
+    # allow-list and CORS origins. Empty means localhost-only.
+    mcp_lan_host: str = Field(default="")
 
     # ======================================================
     # WEB SEARCH (Tavily)
